@@ -7,7 +7,7 @@ extends Node3D
 @onready var invalid_ids_input: TextEdit = $CanvasLayer/Panel/HBoxContainer/InvalidIdsInput
 
 @export var glow_amount := 6.0
-@export var red_glow_time := 0.01
+@export var red_glow_time := 0.1
 @export var green_glow_time := 0.00001
 
 var invalid_ids: Array[int]
@@ -114,6 +114,7 @@ func _solve_part_2() -> void:
 						var gm := green_material as StandardMaterial3D
 						var original_emission_energy = gm.emission_energy_multiplier
 						gm.emission_energy_multiplier = glow_amount
+						#await get_tree().create_timer(green_glow_time).timeout
 						gm.emission_energy_multiplier = original_emission_energy
 				else:
 					invalid_ids.append(num)
@@ -148,7 +149,7 @@ func _test_number_2(target: int, full: int, current_index: int) -> bool:
 	var repeated_times: int = remaineder_length / target_length
 	var test: String = str(target) + str(target).repeat(repeated_times)
 
-	return str(full) == test
+	return full_length > 1 && str(full) == test
 
 func _on_button_pressed() -> void:
 	running = true
