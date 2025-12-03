@@ -1,0 +1,42 @@
+[gd_resource type="Theme" load_steps=4 format=3 uid="uid://c6cyi4mvfttat"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wvktn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_e1x85"]
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 5
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cjfk0"]
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+bg_color = Color(0.28485027, 0.2848503, 0.28485018, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 5
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0)
+
+[resource]
+TextEdit/colors/background_color = Color(0, 0, 0, 0)
+TextEdit/colors/font_color = Color(0, 0, 0, 1)
+TextEdit/colors/font_outline_color = Color(1, 1, 1, 1)
+TextEdit/colors/font_placeholder_color = Color(0, 0, 0, 0.6)
+TextEdit/colors/font_readonly_color = Color(0.875, 0.875, 0.875, 0.5)
+TextEdit/styles/focus = SubResource("StyleBoxEmpty_wvktn")
+TextEdit/styles/normal = SubResource("StyleBoxFlat_e1x85")
+TextEdit/styles/read_only = SubResource("StyleBoxFlat_cjfk0")
