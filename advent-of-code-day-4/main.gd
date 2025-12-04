@@ -8,7 +8,13 @@ enum Part {
 @export var paper_roll_character: String = "@"
 @export var empty_space_character: String = "."
 @export var max_adjacent_rolls := 4
-@export_file("*.txt") var input_file_path: String
+@export_enum("Use Sample", "Use Input") var data_to_use := "Use Sample"
+@export_file("*.txt") var sample_input_file: String
+@export_file("*.txt") var input_file: String
+
+@onready var tile_map_layer: MainTileMap = $TileMapLayer
+@onready var cam: Camera2D = $Camera2D
+
 
 var instructions := []
 var factory := {}
@@ -19,6 +25,7 @@ var total_rolls_accessible := 0
 var total_rolls_removed := 0
 
 func _ready() -> void:
+	var input_file_path = sample_input_file if data_to_use == "Use Sample" else input_file
 	instructions = InstructionLoader.load_instructions(input_file_path)
 	build_factory()
 	
@@ -34,28 +41,65 @@ func _ready() -> void:
 		call_deferred("run_part_2")
 	else:
 		pass
+		
+	tile_map_layer.update_internals()
+	zoom_camera()
 
 func build_factory() -> void:
 	for row_i in instructions.size():
 		for cell_i in instructions[row_i].length():
-			set_cell(Vector2i(row_i, cell_i), instructions[row_i][cell_i])
+			var character: String = instructions[row_i][cell_i]
+			var pos := Vector2i(row_i, cell_i)
+			# for whatever reason, the tile_pos is the opposite of the dictionary pos
+			var tile_pos := Vector2i(cell_i, row_i)
+			if character == paper_roll_character:
+				tile_map_layer.set_cell(tile_pos, 3, Vector2i(0,0))
+			else:
+				tile_map_layer.set_cell(tile_pos, 2, Vector2i(0,0))
+			set_cell(pos, character)
+	
+func zoom_camera() -> void:
+	if factory_rows <= 0 or factory_columns <= 0:
+		return
 
+	var width = factory_columns * 48
+	var height = factory_rows * 48
+
+	# 3) Compute zoom so the whole rect fits the viewport
+	var viewport_size: Vector2 = cam.get_viewport_rect().size
+
+	# Smaller zoom = zoom OUT → see more.
+	# We want the largest zoom that still fits both width and height.
+	var zoom_x: float = viewport_size.x / width
+	var zoom_y: float = viewport_size.y / height
+	var z: float = min(zoom_x, zoom_y)
+	
+	print(z)
+
+	# Optional: give yourself a little border so tiles aren't right on the edge
+	z *= 0.95
+
+	cam.zoom = Vector2(z, z)
+
+
+
+	
 func run_part_1() -> void:
 	for r in factory_rows:
 		for c in factory_columns:
 			var pos := Vector2i(r, c)
 			var cell_value = get_cell(pos)
 			if cell_value == paper_roll_character:
-				#print("-- Checking: ", pos)
-				if check_forklift_access(Vector2i(r, c)):
+				if check_forklift_access(pos):
+					tile_map_layer.set_tile_modulate(Vector2i(pos.y, pos.x), Color.DARK_RED)
 					total_rolls_accessible += 1
 					
 	print("Total: ", total_rolls_accessible)
 	
 func run_part_2() -> void:
-	var total_remaining_accessible_rolls = count_and_remove_accessible_rolls()
+	var total_remaining_accessible_rolls = await count_and_remove_accessible_rolls()
 	while total_remaining_accessible_rolls > 0:
-		total_remaining_accessible_rolls = count_and_remove_accessible_rolls()
+		total_remaining_accessible_rolls = await count_and_remove_accessible_rolls()
 		
 	print("Total removed: ", total_rolls_removed)
 
@@ -67,12 +111,15 @@ func count_and_remove_accessible_rolls() -> int:
 			var cell_value = get_cell(pos)
 			if cell_value == paper_roll_character:
 				if check_forklift_access(pos):
+					tile_map_layer.set_tile_modulate(Vector2i(pos.y, pos.x), Color.DARK_RED)
+					await get_tree().create_timer(0.05).timeout
 					accessible_rolls += 1
 					set_cell(pos, ".")
+					tile_map_layer.set_cell(Vector2i(pos.y, pos.x), 2, Vector2i(0,0))
+					tile_map_layer.set_tile_modulate(Vector2i(pos.y, pos.x), Color.WHITE)
 	
 	total_rolls_removed += accessible_rolls
 	return accessible_rolls
-
 
 func set_cell(pos: Vector2i, value: String) -> void:
 	factory[pos] = value
