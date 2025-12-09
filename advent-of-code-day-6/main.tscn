@@ -4,5 +4,6 @@
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_ig7tw")
+data_to_use = "Use Input"
 sample_input_file = "res://sample_input.txt"
 input_file = "res://input.txt"

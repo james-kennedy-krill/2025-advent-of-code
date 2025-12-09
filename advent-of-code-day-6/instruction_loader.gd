@@ -14,7 +14,7 @@ static func load_instructions(path: String) -> Array[String]:
 		return results
 
 	while not file.eof_reached():
-		var line := file.get_line().strip_edges()
+		var line := file.get_line()
 		if line != "":
 			results.append(line)
 
