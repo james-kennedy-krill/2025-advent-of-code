@@ -65,7 +65,7 @@ func solve_part_two():
 	var lines = instructions.duplicate()
 	var left_or_right: int
 	
-	for o in range(0, 1000000):
+	for o in range(0, 10000000):
 		var line_path = ""
 		var map = instructions.duplicate()
 		var line_toggles: Array[bool] = []
