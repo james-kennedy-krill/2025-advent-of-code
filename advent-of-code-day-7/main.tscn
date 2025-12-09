@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://8qgakp2djmys"]
+
+[ext_resource type="Script" uid="uid://g7it2l10qyj7" path="res://main.gd" id="1_ig7tw"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_ig7tw")
+part = 1
+data_to_use = "Use Input"
+sample_input_file = "res://sample_input.txt"
+input_file = "res://input.txt"
