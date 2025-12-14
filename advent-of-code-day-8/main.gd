@@ -13,6 +13,7 @@ enum Part {
 @onready var points_container: Node3D = $PointsContainer
 @onready var camera_3d: Camera3D = $Camera3D
 
+@export var run_showcase: bool = true
 @export var view_distance: float = 16.0
 @export var view_height: float = 2.0
 @export var move_time: float = 0.8
@@ -58,7 +59,8 @@ func _ready() -> void:
 		return
 	
 	if debug:
-		print(instructions)
+		for i in instructions.size():
+			print(i, ": ", instructions[i])
 	
 	if part == Part.ONE:
 		call_deferred("solve_part_one")
@@ -85,7 +87,8 @@ func solve_part_one():
 		if child is Node3D:
 			points.append(child.global_position)
 	
-	var number_of_closest_pairs = 10 if data_to_use == "Use Sample" else 1000
+	#var number_of_closest_pairs = 10 if data_to_use == "Use Sample" else 1000
+	var number_of_closest_pairs = -1
 	var closest_pairs = get_top_closest_pairs(number_of_closest_pairs)
 	if debug:
 		for pair in closest_pairs:
@@ -113,14 +116,80 @@ func solve_part_one():
 		push_warning("points_container has no Node3D children.")
 		return
 
-	if debug:
+	if run_showcase:
+		await _do_initial_framing_shot(true)
 		_running = true
 		_run_showcase()
 	else: 
 		await _do_initial_framing_shot(true)
 
 func solve_part_two():
-	pass
+	for line in instructions:
+		var xyz = line.split(",")
+		var new_point: Vector3 = Vector3(float(xyz[0]), float(xyz[1]), float(xyz[2]))
+		
+		#var point := CSGBox3D.new()
+		#point.size = Vector3.ONE * point_box_size        # make each point bigger
+		var point := CSGSphere3D.new()
+		point.radius = point_box_size
+		point.radial_segments = segments
+		point.rings = rings
+		point.position = new_point
+		point.material = box_material
+		points_container.add_child(point)
+
+	points.clear()
+	for child in $PointsContainer.get_children():
+		if child is Node3D:
+			points.append(child.global_position)
+	
+	if run_showcase:
+		await _do_initial_framing_shot(true)
+		_running = true
+		_run_showcase()
+	else: 
+		await _do_initial_framing_shot(true)
+	
+	var n := points.size()
+
+	var edges: Array[Dictionary] = []
+	# no edges.reserve(...) in Godot Arrays
+
+	for i in range(n):
+		for j in range(i + 1, n):
+			var dx: int = points[i].x - points[j].x
+			var dy: int = points[i].y - points[j].y
+			var dz: int = points[i].z - points[j].z
+			var d2: int = dx * dx + dy * dy + dz * dz
+			edges.append({ "d2": d2, "i": i, "j": j })
+
+	edges.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var ad2: int = a["d2"]
+		var bd2: int = b["d2"]
+		if ad2 != bd2:
+			return ad2 < bd2
+
+		var ai: int = a["i"]
+		var bi: int = b["i"]
+		if ai != bi:
+			return ai < bi
+
+		return int(a["j"]) < int(b["j"])
+	)
+
+	var dsu := DSU.new(n)
+
+	for e in edges:
+		var i: int = e["i"]
+		var j: int = e["j"]
+		if dsu.union(i, j):
+			if dsu.components == 1:
+				print(points[i].x * points[j].x)
+				return
+
+	push_error("No solution (unexpected)")
+	return -1
+
 
 func get_top_closest_pairs(amount: int = 10) -> Array:
 	var results: Array = []
@@ -142,6 +211,8 @@ func get_top_closest_pairs(amount: int = 10) -> Array:
 	)
 
 	# 3) Slice out the top N entries
+	if amount == -1:
+		return results
 	if results.size() > amount:
 		results = results.slice(0, amount)
 

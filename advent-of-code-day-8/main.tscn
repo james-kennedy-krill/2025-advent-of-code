@@ -24,13 +24,23 @@ glow_hdr_threshold = 0.8
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_ig7tw")
+part = 1
 data_to_use = "Use Input"
 sample_input_file = "res://sample_input.txt"
 input_file = "res://input.txt"
-move_time = 0.5
-hold_time = 0.2
+debug = true
+run_showcase = false
+view_distance = 32.0
+view_height = 4.0
+move_time = 1.0
+hold_time = 0.5
 initial_framing_padding = 1.6
+point_box_size = 25.0
+point_segments = 24
+rings = 16
 box_material = ExtResource("2_h2yge")
+radius = 5.0
+segments = 24
 string_material = ExtResource("2_0xm2m")
 
 [node name="Camera3D" type="Camera3D" parent="."]
