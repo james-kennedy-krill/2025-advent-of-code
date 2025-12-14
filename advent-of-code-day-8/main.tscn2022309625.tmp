@@ -24,9 +24,9 @@ glow_hdr_threshold = 0.8
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_ig7tw")
-data_to_use = "Use Input"
 sample_input_file = "res://sample_input.txt"
 input_file = "res://input.txt"
+debug = true
 move_time = 0.5
 hold_time = 0.2
 initial_framing_padding = 1.6

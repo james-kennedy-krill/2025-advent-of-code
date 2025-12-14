@@ -44,6 +44,7 @@ var cylinders: Array[MeshInstance3D] = []      # Handles to created cylinders
 var instructions := []
 var grand_total := 0
 var points: PackedVector3Array
+var distances: Dictionary = {}
 
 func _ready() -> void:
 	var input_file_path = sample_input_file if data_to_use == "Use Sample" else input_file
@@ -60,9 +61,9 @@ func _ready() -> void:
 		print(instructions)
 	
 	if part == Part.ONE:
-		solve_part_one()
+		call_deferred("solve_part_one")
 	if part == Part.TWO:
-		solve_part_two()
+		call_deferred("solve_part_two")
 	
 func solve_part_one():
 	for line in instructions:
@@ -82,10 +83,29 @@ func solve_part_one():
 	points.clear()
 	for child in $PointsContainer.get_children():
 		if child is Node3D:
-			points.append(child.global_position)	
+			points.append(child.global_position)
+	
+	var number_of_closest_pairs = 10 if data_to_use == "Use Sample" else 1000
+	var closest_pairs = get_top_closest_pairs(number_of_closest_pairs)
+	if debug:
+		for pair in closest_pairs:
+			print("Points ", pair.i, " and ", pair.j, " distance = ", sqrt(pair.d2))
+		
+	var clusters = get_point_clusters_from_pairs(closest_pairs)
+	if debug:
+		print("CLUSTERS: ", clusters)
+	var product := 1
+	clusters.sort_custom(func(a,b): 
+		return a.size() > b.size()
+		)
+	if debug:
+		print("SORTED CLUSTERS:", clusters)
+	for i in 3:
+		product *= clusters[i].size()
+	print("TOTAL: ", product)
 	
 	#draw a line between them
-	_build_connections()
+	_build_cluster_connections(clusters)
 	
 	
 	_collect_points()
@@ -97,14 +117,100 @@ func solve_part_one():
 		_running = true
 		_run_showcase()
 	else: 
-		await _do_initial_framing_shot()
+		await _do_initial_framing_shot(true)
 
 func solve_part_two():
 	pass
 
+func get_top_closest_pairs(amount: int = 10) -> Array:
+	var results: Array = []
+	var count := points.size()
+
+	# 1) Generate all unique pairs + distance_squared
+	for i in range(count):
+		for j in range(i + 1, count):
+			var d2 := points[i].distance_squared_to(points[j])
+			results.append({
+				"i": i,
+				"j": j,
+				"d2": d2
+			})
+
+	# 2) Sort by distance
+	results.sort_custom(func(a, b):
+		return a["d2"] < b["d2"]
+	)
+
+	# 3) Slice out the top N entries
+	if results.size() > amount:
+		results = results.slice(0, amount)
+
+	return results
+
+func get_point_clusters_from_pairs(pairs: Array) -> Array:
+	# Build adjacency: point_index -> Array[int] of neighbors
+	var neighbors: Dictionary = {}  # int -> Array[int]
+
+	for pair in pairs:
+		var a: int = pair["i"]
+		var b: int = pair["j"]
+
+		if not neighbors.has(a):
+			neighbors[a] = []
+		if not neighbors.has(b):
+			neighbors[b] = []
+
+		neighbors[a].append(b)
+		neighbors[b].append(a)
+
+	var clusters: Array = []
+	var visited: Dictionary = {}  # int -> bool
+
+	# DFS/BFS over the adjacency to find connected components
+	for start_point in neighbors.keys():
+		if visited.has(start_point):
+			continue
+
+		var stack: Array[int] = [start_point]
+		var component: Array[int] = []
+
+		while not stack.is_empty():
+			var current: int = stack.pop_back()
+			if visited.has(current):
+				continue
+
+			visited[current] = true
+			component.append(current)
+
+			var current_neighbors: Array = neighbors[current]
+			for n in current_neighbors:
+				if not visited.has(n):
+					stack.append(n)
+
+		component.sort()  # optional: keep indices in order
+		clusters.append(component)
+
+	return clusters
+
+
+func _solve_distances():
+	# Get the 10/1000 shortest distances
+	var arr: Array[Vector3] = []
+	arr.resize(points.size())
+	for i in arr.size():
+		arr[i] = points[i]
+		
+	arr.sort_custom(_sort_function)
+	return PackedVector3Array(arr)
+	
+func _sort_function(a: Vector3, b: Vector3) -> bool:
+	print("A: ", a)
+	print("B: ", b)
+	var distance = _distance_between_points(a, b)
+	distances.set(distance, [a, b])
+	return false
+
 func _build_connections():
-	
-	
 	# Clean up old cylinders if script reloads
 	for cyl in cylinders:
 		cyl.queue_free()
@@ -118,6 +224,20 @@ func _build_connections():
 		var cyl := _create_cylinder_between(a, b)
 		add_child(cyl)
 		cylinders.append(cyl)
+
+func _build_cluster_connections(clusters):
+	for cyl in cylinders:
+		cyl.queue_free()
+	cylinders.clear()
+	
+	for g in clusters.size():
+		for i in clusters[g].size()-1:
+			var a: Vector3 = points[clusters[g][i]]
+			var b: Vector3 = points[clusters[g][(i + 1) % clusters[g].size()]]
+			
+			var cyl := _create_cylinder_between(a, b)
+			add_child(cyl)
+			cylinders.append(cyl)
 
 func _create_cylinder_between(a: Vector3, b: Vector3) -> MeshInstance3D:
 	var cyl_instance := MeshInstance3D.new()
@@ -179,7 +299,7 @@ func _run_showcase() -> void:
 # INITIAL WIDE SHOT FOR ALL POINTS
 # -----------------------------------------------------
 
-func _do_initial_framing_shot() -> void:
+func _do_initial_framing_shot(zoom: bool = false) -> void:
 	var positions: Array[Vector3] = []
 	for p: Node3D in _points:
 		positions.append(p.global_position)
@@ -225,17 +345,37 @@ func _do_initial_framing_shot() -> void:
 
 	await tween.finished
 
-	# --- Step 2: orbit once around the cluster ---
+	# --- Step 2: orbit once around the cluster, with optional zoom ---
 
 	var elapsed: float = 0.0
 	var end_angle: float = TAU  # 2 * PI, full circle
+
+	# How close to get at max zoom (0.5 = half the distance)
+	var zoom_factor: float = 0.5
 
 	while elapsed < orbit_duration:
 		var t: float = elapsed / orbit_duration
 		var angle: float = lerp(start_angle, end_angle, t)
 
+		# Base distance
+		var distance: float = camera_distance
+
+		if zoom:
+			# Map t [0,1] → zoom_t [0,2]
+			var zoom_t: float = t * 2.0
+
+			if zoom_t <= 1.0:
+				# First half of orbit: zoom in
+				# 0 → 1 : distance goes from camera_distance → camera_distance * zoom_factor
+				distance = lerp(camera_distance, camera_distance * zoom_factor, zoom_t)
+			else:
+				# Second half of orbit: zoom back out
+				# 1 → 2 : distance goes from camera_distance * zoom_factor → camera_distance
+				zoom_t -= 1.0
+				distance = lerp(camera_distance * zoom_factor, camera_distance, zoom_t)
+
 		var pos: Vector3 = center \
-			+ Vector3(cos(angle), 0.0, sin(angle)) * camera_distance \
+			+ Vector3(cos(angle), 0.0, sin(angle)) * distance \
 			+ Vector3.UP * view_height
 
 		var dir: Vector3 = (center - pos).normalized()
@@ -248,6 +388,7 @@ func _do_initial_framing_shot() -> void:
 	# Optional: small pause after orbit before starting point-by-point
 	if initial_hold_time > 0.0:
 		await get_tree().create_timer(initial_hold_time).timeout
+
 
 
 
@@ -278,3 +419,12 @@ func _move_camera_to_target(target: Node3D) -> void:
 	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	await tween.finished
+
+
+func _distance_between_points(p: Vector3, q: Vector3) -> float:
+	var x_diff := p.x - q.x
+	var y_diff := p.y - q.y
+	var z_diff := p.z - q.z
+	var under_square_root = pow(x_diff, 2.0) + pow(y_diff, 2.0) + pow(z_diff, 2.0)
+	var distance = sqrt(under_square_root)
+	return distance
