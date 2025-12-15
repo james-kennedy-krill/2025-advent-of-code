@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://bv1votxp0h452"]
+
+[ext_resource type="Script" uid="uid://b2bul84g7s2n8" path="res://main.gd" id="1_ig7tw"]
+
+[node name="main" type="Node3D"]
+script = ExtResource("1_ig7tw")
+sample_input_file = "res://sample_input.txt"
+input_file = "res://input.txt"
+debug = true
