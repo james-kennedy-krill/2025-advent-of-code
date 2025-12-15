@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3 uid="uid://c72plxt5v2wg5"]
+
+[ext_resource type="Script" uid="uid://dbpsavb6qbu2r" path="res://main.gd" id="1_ig7tw"]
+[ext_resource type="TileSet" uid="uid://yv58x7tf6goe" path="res://2d assets/tileset.tres" id="3_lquwl"]
+[ext_resource type="Script" uid="uid://frqou60b0nol" path="res://camera_2d.gd" id="5_lquwl"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_ig7tw")
+part = 1
+data_to_use = "Use Input"
+sample_input_file = "res://sample_input.txt"
+input_file = "res://input.txt"
+
+[node name="Background" type="TileMapLayer" parent="."]
+modulate = Color(0.46229059, 0.46229059, 0.46229059, 1)
+tile_set = ExtResource("3_lquwl")
+
+[node name="TileMapLayer" type="TileMapLayer" parent="."]
+tile_set = ExtResource("3_lquwl")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+anchor_mode = 0
+limit_enabled = false
+script = ExtResource("5_lquwl")
